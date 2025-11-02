@@ -1,6 +1,5 @@
-iimport streamlit as st
+import streamlit as st
 import google.generativeai as genai
-import os
 
 # Show title and description.
 st.title("💬 Chatbot (Gemini)")
