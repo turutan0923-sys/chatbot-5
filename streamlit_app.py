@@ -59,9 +59,9 @@ not_checked = [s for s in target_screenings if s not in checked]
 
 if st.button("未受診のがん検診"):
     if not_checked:
-        st.write("がん検診受診をおすすめする理由：")
+        st.write("")
         for s in recommended_screenings:
             if s["name"] in not_checked:
                 st.markdown(f"- **{s['name']}**: {s['reason']}")
     else:
-        st.success("推奨されるがん検診はすべて受診済みです😊。")
+        st.success("推奨されるがん検診はすべて受診済みです😊")
