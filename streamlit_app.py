@@ -39,7 +39,7 @@ recommended_screenings = [
     },
 ]
 
-st.title("厚生労働省推奨のがん検診案内チャットボット")
+st.title("「あなたの」がん検診チェックリスト")
 
 # ユーザー入力
 age = st.number_input("あなたの年齢を入力してください", min_value=0, max_value=120, value=40)
