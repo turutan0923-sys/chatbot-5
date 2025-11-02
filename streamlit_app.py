@@ -1,100 +1,67 @@
 import streamlit as st
-import requests
 
-# タイトルと説明の表示
-st.title("💬 Gemini チャットボット")
-st.write("このシンプルなチャットボットは、Google の Gemini API を利用して応答を生成します。 ")
+# がん検診推奨情報（例。実際の推奨年齢等は公式情報を参照してください）
+recommended_screenings = [
+    {
+        "name": "胃がん検診",
+        "sex": "男女",
+        "age_min": 50,
+        "age_max": 75,
+        "reason": "胃がんは早期発見で治療成績が大きく向上します。定期的な検診で無症状のうちに発見できる可能性があります。"
+    },
+    {
+        "name": "大腸がん検診",
+        "sex": "男女",
+        "age_min": 40,
+        "age_max": 75,
+        "reason": "大腸がんは日本人に多く、便潜血検査で早期発見が可能です。"
+    },
+    {
+        "name": "肺がん検診",
+        "sex": "男女",
+        "age_min": 40,
+        "age_max": 75,
+        "reason": "肺がんはがん死亡原因の上位です。喫煙歴がある方は特に検診が重要です。"
+    },
+    {
+        "name": "乳がん検診",
+        "sex": "女性",
+        "age_min": 40,
+        "age_max": 74,
+        "reason": "乳がんは女性のがんの中で最も多く、早期発見で治療成績が向上します。"
+    },
+    {
+        "name": "子宮頸がん検診",
+        "sex": "女性",
+        "age_min": 20,
+        "age_max": 65,
+        "reason": "子宮頸がんは若い世代にも増えています。定期検診で早期発見が可能です。"
+    },
+]
 
-# Streamlit Community CloudのSecretsからAPIキーを取得
-# .streamlit/secrets.toml に GEMINI_API_KEY = "YOUR_API_KEY" を設定してください
-gemini_api_key = st.secrets.get("GEMINI_API_KEY")
+st.title("厚生労働省推奨のがん検診案内チャットボット")
 
-if not gemini_api_key:
-    st.info("Streamlit Community CloudのSecretsに `GEMINI_API_KEY` を設定してください。", icon="🗝️")
-else:
-    # ユーザーがモデルを選択できるようにする（正しいモデル名表記を使用）
-    model_name = st.selectbox(
-        "使用する Gemini モデルを選択",
-        (
-            "gemini-2.5-flash", 
-            "gemini-2.5-pro"
-        )
-    )
-    st.write(f"現在のモデル: **{model_name}**") # 選択中のモデルを表示
+# ユーザー入力
+age = st.number_input("あなたの年齢を入力してください", min_value=0, max_value=120, value=40)
+sex = st.selectbox("あなたの性別を選択してください", ("男性", "女性"))
 
-    if "messages" not in st.session_state:
-        # 初期のメッセージリストをセッションステートに作成
-        st.session_state.messages = []
+# 対象となる検診一覧を作成
+target_screenings = []
+for s in recommended_screenings:
+    if (s["sex"] == "男女" or (sex == "女性" and s["sex"] == "女性")) \
+            and (s["age_min"] <= age <= s["age_max"]):
+        target_screenings.append(s["name"])
 
-    # 既存のチャットメッセージを表示
-    for message in st.session_state.messages:
-        # roleに応じて日本語で表示
-        display_role = "ユーザー" if message["role"] == "user" else "アシスタント"
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+checked = st.multiselect("すでに受けたがん検診を選択してください", target_screenings)
 
-    # ユーザーがメッセージを入力するためのチャット入力フィールド
-    if prompt := st.chat_input("ここにメッセージを入力"):
+# 未受診の検診を判定
+not_checked = [s for s in target_screenings if s not in checked]
 
-        # ユーザーのプロンプトを保存・表示
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
-
-        # Gemini API用にメッセージ形式を準備（ロールを "user" または "model" に変換）
-        gemini_messages = []
-        for m in st.session_state.messages:
-            # StreamlitのロールをAPIのロールにマッピング
-            api_role = "user" if m["role"] == "user" else "model"
-            gemini_messages.append(
-                {
-                    "role": api_role,
-                    "parts": [{"text": m["content"]}]
-                }
-            )
-
-        # Gemini API endpoint
-        api_url = f"https://generativelanguage.googleapis.com/v1/models/{model_name}:generateContent?key={gemini_api_key}"
-
-        headers = {"Content-Type": "application/json"}
-        data = {
-            "contents": gemini_messages,
-            "generationConfig": {
-                "temperature": 0.7,
-                "topP": 0.8
-            }
-        }
-
-        try:
-            # アシスタントの応答をチャットメッセージコンテナ内に表示
-            with st.chat_message("assistant"):
-                with st.spinner(f"{model_name} が応答を生成中..."):
-                    response = requests.post(api_url, headers=headers, json=data, timeout=30)
-                    response.raise_for_status() # HTTPエラーがあれば例外を発生
-                    
-                    result = response.json()
-                    
-                    # APIからのレスポンス構造のチェックと応答の取得
-                    if "candidates" in result and result["candidates"] and \
-                       "content" in result["candidates"][0] and \
-                       "parts" in result["candidates"][0]["content"] and \
-                       result["candidates"][0]["content"]["parts"]:
-                        
-                        gemini_reply = result["candidates"][0]["content"]["parts"][0]["text"]
-                    else:
-                        # 予期しないレスポンス形式の場合
-                        gemini_reply = f"エラー: 予期しないAPI応答形式です。{result}"
-
-                    st.markdown(gemini_reply)
-            
-            # アシスタントの応答をセッションステートに保存
-            st.session_state.messages.append({"role": "assistant", "content": gemini_reply})
-
-        except requests.exceptions.RequestException as e:
-            error_message = f"APIリクエストエラーが発生しました: {e}"
-            st.error(error_message)
-            st.session_state.messages.append({"role": "assistant", "content": error_message})
-        except Exception as e:
-            error_message = f"予期せぬエラーが発生しました: {e}"
-            st.error(error_message)
-            st.session_state.messages.append({"role": "assistant", "content": error_message})
+if st.button("未受診のがん検診の理由を表示"):
+    if not_checked:
+        st.write("以下の検診はまだ受けていません。受診をおすすめする理由：")
+        for s in recommended_screenings:
+            if s["name"] in not_checked:
+                st.markdown(f"- **{s['name']}**: {s['reason']}")
+    else:
+        st.success("推奨されるがん検診はすべて受診済みです。")
