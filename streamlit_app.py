@@ -39,7 +39,7 @@ recommended_screenings = [
     },
 ]
 
-st.title("「あなたの」がん検診チェックリスト")
+st.title("あなたのがん検診チェックリスト")
 
 # ユーザー入力
 age = st.number_input("あなたの年齢を入力してください", min_value=0, max_value=120, value=40)
@@ -57,11 +57,11 @@ checked = st.multiselect("すでに受けたがん検診を選択してくださ
 # 未受診の検診を判定
 not_checked = [s for s in target_screenings if s not in checked]
 
-if st.button("未受診のがん検診の理由を表示"):
+if st.button("未受診のがん検診"):
     if not_checked:
-        st.write("以下の検診はまだ受けていません。受診をおすすめする理由：")
+        st.write("がん検診受診をおすすめする理由：")
         for s in recommended_screenings:
             if s["name"] in not_checked:
                 st.markdown(f"- **{s['name']}**: {s['reason']}")
     else:
-        st.success("推奨されるがん検診はすべて受診済みです。")
+        st.success("推奨されるがん検診はすべて受診済みです😊。")
